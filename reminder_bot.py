@@ -7,7 +7,7 @@ from telegram.ext import (
     ContextTypes, CallbackQueryHandler, ConversationHandler, PicklePersistence
 )
 
-BOT_TOKEN = '7686011297:AAFJsW-woZr5qkrfGeZjcRIeuMdxYoMs4tg'
+BOT_TOKEN = '7268279008:AAETr9r2u22ZSQnDT6lKvKoPNH6GA1J52RM'
 ADMIN_GROUP_ID = -1002504552520  # O'zingizning guruh ID'ingizni yozing
 
 ASK_PHONE, ASK_CONTRACT, ASK_PAYMENT, CHOOSE_CONTRACT = range(4)
