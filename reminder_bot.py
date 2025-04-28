@@ -9,7 +9,6 @@ from telegram.ext import (
 
 BOT_TOKEN = '7268279008:AAETr9r2u22ZSQnDT6lKvKoPNH6GA1J52RM'
 ADMIN_GROUP_ID = -1002314667838  # O'zingizning guruh ID'ingizni yozing
-bot.delete_webhook()
 ASK_PHONE, ASK_CONTRACT, ASK_PAYMENT, CHOOSE_CONTRACT = range(4)
 
 # Start komandasi
@@ -107,6 +106,10 @@ if __name__ == '__main__':
     persistence = PicklePersistence(filepath="user_data.pkl")
     app = ApplicationBuilder().token(BOT_TOKEN).persistence(persistence).build()
 
+    # 👉 Mana shu yerda Webhook'ni o'chirib qo'yamiz
+    import asyncio
+    asyncio.run(app.bot.delete_webhook(drop_pending_updates=True))
+
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -125,3 +128,4 @@ if __name__ == '__main__':
 
     app.add_handler(conv_handler)
     app.run_polling()
+
