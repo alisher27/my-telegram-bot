@@ -9,7 +9,7 @@ from telegram.ext import (
 
 BOT_TOKEN = '7268279008:AAETr9r2u22ZSQnDT6lKvKoPNH6GA1J52RM'
 ADMIN_GROUP_ID = -1002314667838  # O'zingizning guruh ID'ingizni yozing
-
+bot.delete_webhook()
 ASK_PHONE, ASK_CONTRACT, ASK_PAYMENT, CHOOSE_CONTRACT = range(4)
 
 # Start komandasi
