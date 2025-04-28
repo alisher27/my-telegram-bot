@@ -1,4 +1,3 @@
-import asyncio
 from telegram import (
     Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton,
     InlineKeyboardMarkup
@@ -103,12 +102,9 @@ async def contract_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ASK_PAYMENT
 
 # Botni ishga tushirish
-async def main():
+if __name__ == '__main__':
     persistence = PicklePersistence(filepath="user_data.pkl")
     app = ApplicationBuilder().token(BOT_TOKEN).persistence(persistence).build()
-
-    # 👉 Mana shu yerda Webhook'ni o'chirib qo'yamiz
-    await app.bot.delete_webhook(drop_pending_updates=True)
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
@@ -127,7 +123,6 @@ async def main():
     )
 
     app.add_handler(conv_handler)
-    await app.run_polling()
 
-if __name__ == '__main__':
-    asyncio.run(main())
+    # Run the bot without asyncio.run()
+    app.run_polling()
