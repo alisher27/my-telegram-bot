@@ -6,12 +6,14 @@ from telegram.ext import (
     ContextTypes, CallbackQueryHandler, ConversationHandler, PicklePersistence
 )
 
-BOT_TOKEN = '7580649383:AAE2F_8ZegomnFwxai3KGbI2sApTggMkf-k'  # ← bu yerga o'z bot tokeningizni yozing
-ADMIN_GROUP_ID = -1002546680679  # ← o'z guruh ID'ingizni yozing
+# === Sozlamalar ===
+BOT_TOKEN = '7580649383:AAE2F_8ZegomnFwxai3KGbI2sApTggMkf-k'  # Bu yerga o'z bot tokeningizni yozing
+ADMIN_GROUP_ID = -1002546680679  # Bu yerga o'z guruh ID'ingizni yozing
 
+# === Bosqichlar ===
 ASK_PHONE, ASK_CONTRACT, ASK_PAYMENT, CHOOSE_CONTRACT = range(4)
 
-# /start komandasi
+# === /start komandasi ===
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data = context.user_data
     if 'phone' not in user_data:
@@ -24,7 +26,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         return await show_main_menu(update, context)
 
-# Telefon raqamni olish
+# === Telefon raqamni olish ===
 async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     contact = update.message.contact
     if contact:
@@ -35,7 +37,7 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Iltimos, telefon raqamni yuboring.")
         return ASK_PHONE
 
-# Shartnoma raqamini olish
+# === Shartnoma raqamini olish ===
 async def get_contract(update: Update, context: ContextTypes.DEFAULT_TYPE):
     contract = update.message.text.strip()
     contracts = context.user_data.get('contracts', [])
@@ -46,7 +48,7 @@ async def get_contract(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Iltimos, shu shartnoma uchun to'lov chek rasmini yuboring:")
     return ASK_PAYMENT
 
-# Rasm qabul qilish va guruhga yuborish
+# === To'lov rasmini qabul qilish ===
 async def get_payment_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     contract = context.user_data['current_contract']
     phone = context.user_data['phone']
@@ -69,7 +71,7 @@ async def get_payment_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return await show_main_menu(update, context)
 
-# Asosiy menyu
+# === Asosiy menyu ===
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = [[KeyboardButton("➕ Yangi to'lov")], [KeyboardButton("📄 Mening shartnomalarim")]]
     await update.message.reply_text(
@@ -78,7 +80,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return CHOOSE_CONTRACT
 
-# Tugmalarni boshqarish
+# === Tugmalarni boshqarish ===
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text == "➕ Yangi to'lov":
@@ -99,7 +101,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         return await show_main_menu(update, context)
 
-# Callback tugmalar uchun
+# === Callback tugmalar uchun ===
 async def contract_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -112,7 +114,7 @@ async def contract_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("Shu shartnoma uchun to'lov chek rasmini yuboring:")
         return ASK_PAYMENT
 
-# Botni ishga tushirish
+# === Botni ishga tushirish ===
 if __name__ == '__main__':
     persistence = PicklePersistence(filepath="user_data.pkl")
     app = ApplicationBuilder().token(BOT_TOKEN).persistence(persistence).build()
@@ -130,7 +132,8 @@ if __name__ == '__main__':
         },
         fallbacks=[CommandHandler("start", start)],
         name="main_conversation",
-        persistent=True
+        persistent=True,
+        per_message=True  # === MUHIM: Callback tugmalar uchun ===
     )
 
     app.add_handler(conv_handler)
