@@ -1,142 +1,171 @@
-from telegram import (
-    Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
-)
-from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler, filters,
-    ContextTypes, CallbackQueryHandler, ConversationHandler, PicklePersistence
-)
+import logging
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.filters import CommandStart
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import FSInputFile
+from aiogram.enums import ParseMode
+from aiogram.utils.token import TokenValidationError
+from aiogram.client.default import DefaultBotProperties
+from aiogram.fsm.storage.memory import MemoryStorage
 
-# === Sozlamalar ===
-BOT_TOKEN = '7580649383:AAE2F_8ZegomnFwxai3KGbI2sApTggMkf-k'  # Bu yerga o'z bot tokeningizni yozing
-ADMIN_GROUP_ID = -1002546680679  # Bu yerga o'z guruh ID'ingizni yozing
+import asyncio
 
-# === Bosqichlar ===
-ASK_PHONE, ASK_CONTRACT, ASK_PAYMENT, CHOOSE_CONTRACT = range(4)
+BOT_TOKEN = '7580649383:AAE2F_8ZegomnFwxai3KGbI2sApTggMkf-k'
+ADMIN_GROUP_ID = -1002546680679  # O'zingizning guruh ID'ingiz
 
-# === /start komandasi ===
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_data = context.user_data
-    if 'phone' not in user_data:
-        kb = [[KeyboardButton("📱 Telefon raqamni yuborish", request_contact=True)]]
-        await update.message.reply_text(
-            "Ro'yhatdan o'tish uchun telefon raqamingizni yuboring:",
-            reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True)
-        )
-        return ASK_PHONE
+logging.basicConfig(level=logging.INFO)
+
+# FSM holatlar
+class Form(StatesGroup):
+    waiting_for_phone = State()
+    waiting_for_contract = State()
+    waiting_for_payment = State()
+    choosing_contract = State()
+
+# User ma’lumotlarini xotirada saqlash uchun
+user_data_store = {}
+
+# Telefon raqamni olish keyboard
+def phone_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📱 Telefon raqamni yuborish", request_contact=True)]],
+        resize_keyboard=True
+    )
+
+# Asosiy menyu
+def main_menu():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="➕ Yangi to'lov")],
+            [KeyboardButton(text="📄 Mening shartnomalarim")]
+        ],
+        resize_keyboard=True
+    )
+
+# Inline tugmalar: shartnomalar
+def contract_buttons(contracts):
+    kb = InlineKeyboardBuilder()
+    for contract in contracts:
+        kb.button(text=contract, callback_data=contract)
+    kb.button(text="➕ Yangi shartnoma", callback_data="new_contract")
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+# Start komandasi
+async def cmd_start(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    if user_id not in user_data_store or 'phone' not in user_data_store[user_id]:
+        await message.answer("Ro'yhatdan o'tish uchun telefon raqamingizni yuboring:", reply_markup=phone_keyboard())
+        await state.set_state(Form.waiting_for_phone)
     else:
-        return await show_main_menu(update, context)
+        await message.answer("Quyidagi tugmalardan birini tanlang:", reply_markup=main_menu())
+        await state.set_state(Form.choosing_contract)
 
-# === Telefon raqamni olish ===
-async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    contact = update.message.contact
+
+# Telefon raqamni olish
+async def phone_received(message: types.Message, state: FSMContext):
+    contact = message.contact
     if contact:
-        context.user_data['phone'] = contact.phone_number
-        await update.message.reply_text("Shartnoma raqamingizni kiriting:")
-        return ASK_CONTRACT
+        user_id = message.from_user.id
+        user_data_store[user_id] = {
+            'phone': contact.phone_number,
+            'contracts': []
+        }
+        await message.answer("Shartnoma raqamingizni kiriting:")
+        await state.set_state(Form.waiting_for_contract)
     else:
-        await update.message.reply_text("Iltimos, telefon raqamni yuboring.")
-        return ASK_PHONE
+        await message.answer("Iltimos, telefon raqamni yuboring.")
 
-# === Shartnoma raqamini olish ===
-async def get_contract(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    contract = update.message.text.strip()
-    contracts = context.user_data.get('contracts', [])
+
+# Shartnoma raqamini olish
+async def contract_received(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    contract = message.text.strip()
+    user_data = user_data_store.get(user_id, {})
+    contracts = user_data.get('contracts', [])
     if contract not in contracts:
         contracts.append(contract)
-        context.user_data['contracts'] = contracts
-    context.user_data['current_contract'] = contract
-    await update.message.reply_text("Iltimos, shu shartnoma uchun to'lov chek rasmini yuboring:")
-    return ASK_PAYMENT
+    user_data['current_contract'] = contract
+    user_data['contracts'] = contracts
+    user_data_store[user_id] = user_data
 
-# === To'lov rasmini qabul qilish ===
-async def get_payment_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    contract = context.user_data['current_contract']
-    phone = context.user_data['phone']
-    user = update.message.from_user
+    await message.answer("Iltimos, shu shartnoma uchun to'lov chek rasmini yuboring:")
+    await state.set_state(Form.waiting_for_payment)
 
-    caption = (
-        f"📄 Yangi to'lov\n"
-        f"👤 Foydalanuvchi: @{user.username or user.full_name}\n"
-        f"📞 Tel: {phone}\n"
-        f"📑 Shartnoma: {contract}"
-    )
 
-    photo = update.message.photo[-1] if update.message.photo else None
+# To‘lov rasmini olish
+async def payment_received(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    user_data = user_data_store.get(user_id, {})
+    contract = user_data.get('current_contract')
+    phone = user_data.get('phone')
+    user = message.from_user
+
+    caption = f"📄 Yangi to'lov\n👤 Foydalanuvchi: @{user.username or user.full_name}\n📞 Tel: {phone}\n📑 Shartnoma: {contract}"
+    photo = message.photo[-1] if message.photo else None
+
     if photo:
-        await context.bot.send_photo(chat_id=ADMIN_GROUP_ID, photo=photo.file_id, caption=caption)
-        await update.message.reply_text("To'lov cheki yuborildi! Rahmat.")
+        await message.bot.send_photo(chat_id=ADMIN_GROUP_ID, photo=photo.file_id, caption=caption)
+        await message.answer("To'lov cheki yuborildi! Rahmat.", reply_markup=main_menu())
+        await state.set_state(Form.choosing_contract)
     else:
-        await update.message.reply_text("Iltimos, rasm yuboring.")
-        return ASK_PAYMENT
+        await message.answer("Iltimos, rasm yuboring.")
 
-    return await show_main_menu(update, context)
 
-# === Asosiy menyu ===
-async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    buttons = [[KeyboardButton("➕ Yangi to'lov")], [KeyboardButton("📄 Mening shartnomalarim")]]
-    await update.message.reply_text(
-        "Quyidagi tugmalardan birini tanlang:",
-        reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True)
-    )
-    return CHOOSE_CONTRACT
+# Asosiy menyu tugmalari
+async def handle_main_menu(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    user_data = user_data_store.get(user_id, {})
+    text = message.text
 
-# === Tugmalarni boshqarish ===
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
     if text == "➕ Yangi to'lov":
-        await update.message.reply_text("Shartnoma raqamingizni kiriting:")
-        return ASK_CONTRACT
+        await message.answer("Shartnoma raqamingizni kiriting:")
+        await state.set_state(Form.waiting_for_contract)
     elif text == "📄 Mening shartnomalarim":
-        contracts = context.user_data.get('contracts', [])
+        contracts = user_data.get('contracts', [])
         if not contracts:
-            await update.message.reply_text("Sizda hali shartnomalar mavjud emas.")
-            return await show_main_menu(update, context)
-        buttons = [[InlineKeyboardButton(contract, callback_data=contract)] for contract in contracts]
-        buttons.append([InlineKeyboardButton("➕ Yangi shartnoma", callback_data="new_contract")])
-        await update.message.reply_text(
-            "Quyidagi shartnomalardan birini tanlang:",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
-        return CHOOSE_CONTRACT
+            await message.answer("Sizda hali shartnomalar mavjud emas.", reply_markup=main_menu())
+        else:
+            await message.answer("Quyidagi shartnomalardan birini tanlang:", reply_markup=contract_buttons(contracts))
+
+
+# Inline tugma: shartnoma tanlash
+async def contract_chosen(callback: types.CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_data = user_data_store.get(user_id, {})
+
+    if callback.data == "new_contract":
+        await callback.message.answer("Yangi shartnoma raqamingizni kiriting:")
+        await state.set_state(Form.waiting_for_contract)
     else:
-        return await show_main_menu(update, context)
+        user_data['current_contract'] = callback.data
+        user_data_store[user_id] = user_data
+        await callback.message.answer("Shu shartnoma uchun to'lov chek rasmini yuboring:")
+        await state.set_state(Form.waiting_for_payment)
+    await callback.answer()
 
-# === Callback tugmalar uchun ===
-async def contract_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
 
-    if query.data == "new_contract":
-        await query.message.reply_text("Yangi shartnoma raqamingizni kiriting:")
-        return ASK_CONTRACT
-    else:
-        context.user_data['current_contract'] = query.data
-        await query.message.reply_text("Shu shartnoma uchun to'lov chek rasmini yuboring:")
-        return ASK_PAYMENT
+# Botni ishga tushirish
+async def main():
+    bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    dp = Dispatcher(storage=MemoryStorage())
 
-# === Botni ishga tushirish ===
-if __name__ == '__main__':
-    persistence = PicklePersistence(filepath="user_data.pkl")
-    app = ApplicationBuilder().token(BOT_TOKEN).persistence(persistence).build()
+    dp.message.register(cmd_start, CommandStart())
+    dp.message.register(phone_received, F.contact, Form.waiting_for_phone)
+    dp.message.register(contract_received, F.text, Form.waiting_for_contract)
+    dp.message.register(payment_received, F.photo, Form.waiting_for_payment)
+    dp.message.register(handle_main_menu, F.text, Form.choosing_contract)
+    dp.callback_query.register(contract_chosen, Form.choosing_contract)
 
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
-        states={
-            ASK_PHONE: [MessageHandler(filters.CONTACT, get_phone)],
-            ASK_CONTRACT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_contract)],
-            ASK_PAYMENT: [MessageHandler(filters.PHOTO, get_payment_image)],
-            CHOOSE_CONTRACT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text),
-                CallbackQueryHandler(contract_choice)
-            ],
-        },
-        fallbacks=[CommandHandler("start", start)],
-        name="main_conversation",
-        persistent=True,
-        per_message=True  # === MUHIM: Callback tugmalar uchun ===
-    )
+    await bot.delete_webhook(drop_pending_updates=True)  # polling uchun
 
-    app.add_handler(conv_handler)
+    print("Bot ishga tushdi...")
+    await dp.start_polling(bot)
 
-    print("Bot ishga tushdi (polling)...")
-    app.run_polling()
+
+if __name__ == "__main__":
+    asyncio.run(main())
