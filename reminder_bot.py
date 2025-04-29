@@ -7,8 +7,8 @@ from telegram.ext import (
     ContextTypes, CallbackQueryHandler, ConversationHandler, PicklePersistence
 )
 
-BOT_TOKEN = '7268279008:AAETr9r2u22ZSQnDT6lKvKoPNH6GA1J52RM'
-ADMIN_GROUP_ID = -1002314667838  # O'zingizning guruh ID'ingizni yozing
+BOT_TOKEN = '7580649383:AAE2F_8ZegomnFwxai3KGbI2sApTggMkf-k'
+ADMIN_GROUP_ID = -1002546680679  # O'zingizning guruh ID'ingizni yozing
 ASK_PHONE, ASK_CONTRACT, ASK_PAYMENT, CHOOSE_CONTRACT = range(4)
 
 # Start komandasi
