@@ -1,23 +1,25 @@
 from telegram import (
-    Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton,
-    InlineKeyboardMarkup
+    Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 )
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, filters,
     ContextTypes, CallbackQueryHandler, ConversationHandler, PicklePersistence
 )
 
-BOT_TOKEN = '7580649383:AAE2F_8ZegomnFwxai3KGbI2sApTggMkf-k'
-ADMIN_GROUP_ID = -1002546680679  # O'zingizning guruh ID'ingizni yozing
+BOT_TOKEN = '7580649383:AAE2F_8ZegomnFwxai3KGbI2sApTggMkf-k'  # ← bu yerga o'z bot tokeningizni yozing
+ADMIN_GROUP_ID = -1002546680679  # ← o'z guruh ID'ingizni yozing
+
 ASK_PHONE, ASK_CONTRACT, ASK_PAYMENT, CHOOSE_CONTRACT = range(4)
 
-# Start komandasi
+# /start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data = context.user_data
     if 'phone' not in user_data:
         kb = [[KeyboardButton("📱 Telefon raqamni yuborish", request_contact=True)]]
-        await update.message.reply_text("Ro'yhatdan o'tish uchun telefon raqamingizni yuboring:",
-                                        reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True))
+        await update.message.reply_text(
+            "Ro'yhatdan o'tish uchun telefon raqamingizni yuboring:",
+            reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True)
+        )
         return ASK_PHONE
     else:
         return await show_main_menu(update, context)
@@ -50,7 +52,12 @@ async def get_payment_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone = context.user_data['phone']
     user = update.message.from_user
 
-    caption = f"📄 Yangi to'lov\n👤 Foydalanuvchi: @{user.username or user.full_name}\n📞 Tel: {phone}\n📑 Shartnoma: {contract}"
+    caption = (
+        f"📄 Yangi to'lov\n"
+        f"👤 Foydalanuvchi: @{user.username or user.full_name}\n"
+        f"📞 Tel: {phone}\n"
+        f"📑 Shartnoma: {contract}"
+    )
 
     photo = update.message.photo[-1] if update.message.photo else None
     if photo:
@@ -65,11 +72,13 @@ async def get_payment_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Asosiy menyu
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = [[KeyboardButton("➕ Yangi to'lov")], [KeyboardButton("📄 Mening shartnomalarim")]]
-    await update.message.reply_text("Quyidagi tugmalardan birini tanlang:",
-                                    reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True))
+    await update.message.reply_text(
+        "Quyidagi tugmalardan birini tanlang:",
+        reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True)
+    )
     return CHOOSE_CONTRACT
 
-# To'lov tugmasi bosilganda
+# Tugmalarni boshqarish
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text == "➕ Yangi to'lov":
@@ -82,13 +91,15 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return await show_main_menu(update, context)
         buttons = [[InlineKeyboardButton(contract, callback_data=contract)] for contract in contracts]
         buttons.append([InlineKeyboardButton("➕ Yangi shartnoma", callback_data="new_contract")])
-        await update.message.reply_text("Quyidagi shartnomalardan birini tanlang:",
-                                        reply_markup=InlineKeyboardMarkup(buttons))
+        await update.message.reply_text(
+            "Quyidagi shartnomalardan birini tanlang:",
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
         return CHOOSE_CONTRACT
     else:
         return await show_main_menu(update, context)
 
-# Shartnoma tanlash
+# Callback tugmalar uchun
 async def contract_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -124,5 +135,5 @@ if __name__ == '__main__':
 
     app.add_handler(conv_handler)
 
-    # Run the bot without asyncio.run()
+    print("Bot ishga tushdi (polling)...")
     app.run_polling()
