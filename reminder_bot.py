@@ -13,8 +13,8 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 import asyncio
 
-BOT_TOKEN = '7580649383:AAE2F_8ZegomnFwxai3KGbI2sApTggMkf-k'
-ADMIN_GROUP_ID = -1002546680679  # O'zingizning guruh ID'ingiz
+BOT_TOKEN = '7268279008:AAErO5BSSbqgIyJTjiTBNaRIS5SgHD8lPPw'
+ADMIN_GROUP_ID = -1002314667838  # O'zingizning guruh ID'ingiz
 
 logging.basicConfig(level=logging.INFO)
 
