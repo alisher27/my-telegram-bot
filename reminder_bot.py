@@ -12,8 +12,8 @@ from aiogram.client.default import DefaultBotProperties
 import asyncio
 
 # ⚙️ TOKEN VA ADMIN GROUP
-BOT_TOKEN = "7155901441:AAH6bUxW0Vg5Pf65ov9V4YQtNXIi0_4T60g"
-ADMIN_GROUP_ID = -1002546680679
+BOT_TOKEN = "7982279383:AAF6d00abOVRkjqMIFGZaa1cs6DCX5cQfM8"
+ADMIN_GROUP_ID = -1002314667838
 
 # 🔧 Logging
 logging.basicConfig(level=logging.INFO)
