@@ -1,18 +1,18 @@
 import logging
 import pickle
+import asyncio
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.enums import ParseMode
+from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.filters import CommandStart
 from aiogram.client.default import DefaultBotProperties
-import asyncio
 
 # ⚙️ TOKEN VA ADMIN GROUP
-BOT_TOKEN = "7982279383:AAF6d00abOVRkjqMIFGZaa1cs6DCX5cQfM8"
+BOT_TOKEN = "YOUR_BOT_TOKEN"  # <-- BU YERGA O'Z TOKENINGIZNI YOZING
 ADMIN_GROUP_ID = -1002314667838
 
 # 🔧 Logging
@@ -64,7 +64,7 @@ def contract_buttons(contracts):
     kb.adjust(1)
     return kb.as_markup()
 
-# Handlers
+# 📥 Handlers
 async def cmd_start(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_data = get_user_data(user_id)
@@ -150,11 +150,16 @@ async def contract_chosen(callback: types.CallbackQuery, state: FSMContext):
             await state.set_state(Form.waiting_for_payment)
     await callback.answer()
 
-# 🚀 Main ishga tushirish
+# 🚀 Asosiy bot ishga tushirish funksiyasi
 async def main():
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+
+    # ✅ Har safar ishga tushganda webhook'ni tozalash (xato chiqmasligi uchun)
+    await bot.delete_webhook(drop_pending_updates=True)
+
     dp = Dispatcher(storage=MemoryStorage())
 
+    # 👇 Handlerlarni ro'yxatdan o'tkazish
     dp.message.register(cmd_start, CommandStart())
     dp.message.register(phone_received, F.contact, Form.waiting_for_phone)
     dp.message.register(contract_received, F.text, Form.waiting_for_contract)
@@ -162,7 +167,7 @@ async def main():
     dp.message.register(handle_main_menu, F.text, Form.choosing_contract)
     dp.callback_query.register(contract_chosen, Form.choosing_contract)
 
-    logging.info("🤖 Bot ishga tushdi (polling)...")
+    logging.info("🤖 Bot polling orqali ishga tushdi...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
