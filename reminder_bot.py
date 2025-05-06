@@ -64,6 +64,7 @@ def contract_buttons(contracts):
     kb.adjust(1)
     return kb.as_markup()
 
+# Handlers
 async def cmd_start(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_data = get_user_data(user_id)
@@ -149,28 +150,20 @@ async def contract_chosen(callback: types.CallbackQuery, state: FSMContext):
             await state.set_state(Form.waiting_for_payment)
     await callback.answer()
 
-# 🔁 Polling + webhookni tozalash
+# 🚀 Main ishga tushirish
 async def main():
-    try:
-        bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-        dp = Dispatcher(storage=MemoryStorage())
+    bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    dp = Dispatcher(storage=MemoryStorage())
 
-        # Webhookni o'chirib tashlash (shart!)
-        await bot.delete_webhook(drop_pending_updates=True)
+    dp.message.register(cmd_start, CommandStart())
+    dp.message.register(phone_received, F.contact, Form.waiting_for_phone)
+    dp.message.register(contract_received, F.text, Form.waiting_for_contract)
+    dp.message.register(payment_received, F.photo, Form.waiting_for_payment)
+    dp.message.register(handle_main_menu, F.text, Form.choosing_contract)
+    dp.callback_query.register(contract_chosen, Form.choosing_contract)
 
-        dp.message.register(cmd_start, CommandStart())
-        dp.message.register(phone_received, F.contact, Form.waiting_for_phone)
-        dp.message.register(contract_received, F.text, Form.waiting_for_contract)
-        dp.message.register(payment_received, F.photo, Form.waiting_for_payment)
-        dp.message.register(handle_main_menu, F.text, Form.choosing_contract)
-        dp.callback_query.register(contract_chosen, Form.choosing_contract)
-
-        logging.info("🤖 Bot ishga tushdi (polling)...")
-        await dp.start_polling(bot)
-    except Exception as e:
-        logging.error(f"❌ Botda xatolik yuz berdi: {e}")
-        await asyncio.sleep(5)
-        await main()
+    logging.info("🤖 Bot ishga tushdi (polling)...")
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
