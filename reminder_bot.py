@@ -12,8 +12,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.client.default import DefaultBotProperties
 
 # ⚙️ TOKEN VA ADMIN GROUP
-BOT_TOKEN = "YOUR_BOT_TOKEN"  # <-- BU YERGA O'Z TOKENINGIZNI YOZING
-ADMIN_GROUP_ID = -1002314667838
+BOT_TOKEN = "7155901441:AAHg96ygZZzc8W1BVzn_bzElC0eUmu5niV0"  # <-- BU YERGA O'Z TOKENINGIZNI YOZING
+ADMIN_GROUP_ID = -1002546680679
 
 # 🔧 Logging
 logging.basicConfig(level=logging.INFO)
